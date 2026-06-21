@@ -288,6 +288,11 @@ func InitResources() error {
 
 	// Initialize options, should after model.InitDB()
 	model.InitOptionMap()
+	err = service.ApplyDeploymentPreset()
+	if err != nil {
+		common.FatalLog("failed to apply deployment preset: " + err.Error())
+		return err
+	}
 
 	// 清理旧的磁盘缓存文件
 	common.CleanupOldCacheFiles()

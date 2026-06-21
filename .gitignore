@@ -13,6 +13,10 @@ web/classic/dist
 web/node_modules
 web/dist
 .env
+.env.*
+!.env.example
+!.env.azure.template
+!.env.azure.production.example
 one-api
 new-api
 /__debug_bin*
@@ -36,3 +40,7 @@ data/
 token_estimator_test.go
 skills-lock.json
 .playwright-mcp
+node_modules/
+dist/
+tmp/
+*.log

@@ -1,0 +1,106 @@
+version: '3.9'
+
+services:
+  mysql:
+    image: mariadb:11.4
+    container_name: boluo-mysql
+    restart: unless-stopped
+    env_file:
+      - .env.azure
+    environment:
+      - MARIADB_ROOT_PASSWORD=${LOCAL_DB_ROOT_PASSWORD}
+      - MARIADB_DATABASE=${LOCAL_DB_NAME}
+      - MARIADB_USER=${LOCAL_DB_USER}
+      - MARIADB_PASSWORD=${LOCAL_DB_PASSWORD}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --innodb-buffer-pool-size=256M
+      - --max-connections=300
+    volumes:
+      - local_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -u root -p$$MARIADB_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: boluo-redis
+    restart: unless-stopped
+    env_file:
+      - .env.azure
+    command:
+      - sh
+      - -c
+      - redis-server --requirepass "$$LOCAL_REDIS_PASSWORD" --appendonly yes --save 60 1000
+    volumes:
+      - local_redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$LOCAL_REDIS_PASSWORD\" ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  new-api:
+    image: calciumion/new-api:latest
+    container_name: boluo-new-api
+    restart: unless-stopped
+    command: --log-dir /app/logs
+    env_file:
+      - .env.azure
+    ports:
+      - "3000:3000"
+    environment:
+      - TZ=Asia/Shanghai
+      - SQL_DSN=${LOCAL_SQL_DSN}
+      - REDIS_CONN_STRING=${LOCAL_REDIS_CONN_STRING}
+      - NODE_TYPE=master
+      - NODE_NAME=boluo-api-gateway-node-1
+      - AutomaticDisableChannelEnabled=true
+      - ERROR_LOG_ENABLED=true
+      - BATCH_UPDATE_ENABLED=true
+      - MEMORY_CACHE_ENABLED=true
+      - SYNC_FREQUENCY=60
+      - CHANNEL_UPDATE_FREQUENCY=30
+      - GENERATE_DEFAULT_TOKEN=false
+      - SQL_MAX_IDLE_CONNS=100
+      - SQL_MAX_OPEN_CONNS=1000
+      - SQL_MAX_LIFETIME=60
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./data:/data
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:3000/api/status | grep -o '\"success\":\\s*true' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 6
+      start_period: 40s
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: boluo-nginx
+    restart: unless-stopped
+    env_file:
+      - .env.azure
+    depends_on:
+      new-api:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/nginx/certs:/etc/nginx/certs:ro
+
+volumes:
+  local_mysql_data:
+  local_redis_data:
