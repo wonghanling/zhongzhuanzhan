@@ -1,0 +1,21 @@
+version: '3.9'
+
+# 覆盖 docker-compose.local-stack.yml 里的 new-api 服务
+# 用本地源码构建镜像，替换官方镜像
+# 用法：
+#   docker compose --env-file .env.azure \
+#     -f docker-compose.local-stack.yml \
+#     -f docker-compose.local-build.yml \
+#     build new-api
+#
+#   docker compose --env-file .env.azure \
+#     -f docker-compose.local-stack.yml \
+#     -f docker-compose.local-build.yml \
+#     up -d new-api
+
+services:
+  new-api:
+    image: boluo-new-api:local
+    build:
+      context: .
+      dockerfile: Dockerfile
