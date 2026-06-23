@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/QuantumNous/new-api/common"
-	"github.com/QuantumNous/new-api/logger"
 )
 
 // N1nGroupPrice holds upstream prices for one model+group combination.
@@ -34,7 +33,7 @@ func LoadN1nGroupPricing() {
 	}
 	var m map[string]map[string]N1nGroupPrice
 	if err := json.Unmarshal([]byte(raw), &m); err != nil {
-		logger.SysError("LoadN1nGroupPricing: failed to parse option: " + err.Error())
+		common.SysError("LoadN1nGroupPricing: failed to parse option: " + err.Error())
 		setDefaultN1nGroupPricing()
 		return
 	}
