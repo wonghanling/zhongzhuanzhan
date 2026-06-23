@@ -163,6 +163,13 @@ type RelayInfo struct {
 
 	PriceData types.PriceData
 
+	// N1nRoutingGroup is the actual routing group returned by n1n in the
+	// X-Routing-Group response header. Empty string means not set / not n1n.
+	N1nRoutingGroup string
+	// N1nPricingBasis records how the quota was calculated for this request.
+	// Values: "exact_header_group" | "auto_max_fallback" | ""
+	N1nPricingBasis string
+
 	// TieredBillingSnapshot is a frozen snapshot of tiered billing rules
 	// captured at pre-consume time. Non-nil only when billing mode is "tiered_expr".
 	TieredBillingSnapshot *billingexpr.BillingSnapshot

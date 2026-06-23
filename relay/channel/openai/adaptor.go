@@ -619,6 +619,17 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 }
 
 func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (usage any, err *types.NewAPIError) {
+	// Capture n1n routing group from response header before dispatching.
+	// Header value may be URL-encoded (e.g. %E5%AE%98%E8%BD%AC → 官转).
+	if resp != nil && resp.Header != nil {
+		if rg := resp.Header.Get("X-Routing-Group"); rg != "" {
+			if decoded, decErr := url.QueryUnescape(rg); decErr == nil {
+				info.N1nRoutingGroup = decoded
+			} else {
+				info.N1nRoutingGroup = rg
+			}
+		}
+	}
 	switch info.RelayMode {
 	case relayconstant.RelayModeRealtime:
 		err, usage = OpenaiRealtimeHandler(c, info)

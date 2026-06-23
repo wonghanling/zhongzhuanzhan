@@ -294,6 +294,9 @@ func InitResources() error {
 		return err
 	}
 
+	// Load n1n group pricing table (must be after InitOptionMap)
+	service.LoadN1nGroupPricing()
+
 	// 清理旧的磁盘缓存文件
 	common.CleanupOldCacheFiles()
 

@@ -329,6 +329,20 @@ func PostTextConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, us
 	}
 
 	adminRejectReason := common.GetContextKeyString(ctx, constant.ContextKeyAdminRejectReason)
+
+	// N1n header-based dynamic group pricing.
+	// If the upstream returned X-Routing-Group, look up the exact group price.
+	// Falls back to __auto_max__ if the group is unknown, or does nothing if
+	// the model is not in the n1n pricing table (preserves existing behaviour).
+	const n1nMarkup = 1.25
+	if relayInfo.N1nRoutingGroup != "" {
+		if groupPrice, basis := LookupN1nGroupPrice(relayInfo.OriginModelName, relayInfo.N1nRoutingGroup); basis != "" {
+			relayInfo.PriceData.ModelRatio = N1nGroupPricingToModelRatio(groupPrice.InputPerM, n1nMarkup)
+			relayInfo.PriceData.CompletionRatio = N1nGroupPricingToCompletionRatio(groupPrice.InputPerM, groupPrice.OutputPerM)
+			relayInfo.N1nPricingBasis = basis
+		}
+	}
+
 	summary := calculateTextQuotaSummary(ctx, relayInfo, usage)
 
 	var tieredResult *billingexpr.TieredResult
@@ -400,6 +414,10 @@ func PostTextConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, us
 	}
 	if adminRejectReason != "" {
 		other["reject_reason"] = adminRejectReason
+	}
+	if relayInfo.N1nRoutingGroup != "" {
+		other["n1n_routing_group"] = relayInfo.N1nRoutingGroup
+		other["n1n_pricing_basis"] = relayInfo.N1nPricingBasis
 	}
 	if summary.ImageTokens != 0 {
 		other["image"] = true
